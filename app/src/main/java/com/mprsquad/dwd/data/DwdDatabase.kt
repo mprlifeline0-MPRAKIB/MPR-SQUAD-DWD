@@ -12,6 +12,11 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import java.time.Duration
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -26,8 +31,21 @@ data class DutyEntity(
     val endTime: String,
     val location: String,
     val dutyType: String, // DUTY or DAY_OFF
-    val description: String = ""
+    val description: String = "",
+    /** Cached elapsed minutes for this individual shift; same-day shifts remain separate rows. */
+    val durationMinutes: Int = calculateDutyMinutes(startTime, endTime)
 )
+
+/** Supports overnight shifts; an earlier end time belongs to the following day. */
+fun calculateDutyMinutes(start: String, end: String): Int {
+    val format = DateTimeFormatter.ofPattern("H:mm")
+    val startTime = LocalTime.parse(start, format)
+    val endTime = LocalTime.parse(end, format)
+    var minutes = Duration.between(startTime, endTime).toMinutes()
+    if (minutes < 0) minutes += 24 * 60
+    require(minutes in 1..(24 * 60)) { "End time must differ from start time." }
+    return minutes.toInt()
+}
 
 @Entity(tableName = "work_records", indices = [Index("recordDate"), Index("location"), Index("recordType")])
 data class WorkRecordEntity(
@@ -85,8 +103,15 @@ interface DwdDao {
     @Query("SELECT * FROM duties ORDER BY workDate DESC")
     fun observeDuties(): Flow<List<DutyEntity>>
 
-    @Query("SELECT * FROM duties WHERE workDate BETWEEN :from AND :to ORDER BY workDate")
+    @Query("SELECT * FROM duties WHERE workDate BETWEEN :from AND :to ORDER BY workDate, startTime")
     fun observeDuties(from: Long, to: Long): Flow<List<DutyEntity>>
+
+    /** Multiple duty rows on one date are retained and summed independently. */
+    @Query("SELECT COALESCE(SUM(durationMinutes), 0) FROM duties WHERE workDate BETWEEN :from AND :to AND dutyType = 'DUTY'")
+    fun dutyMinutesTotal(from: Long, to: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM duties WHERE workDate BETWEEN :from AND :to AND dutyType = 'DUTY'")
+    fun dutyEntryCount(from: Long, to: Long): Flow<Int>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveWorkRecord(item: WorkRecordEntity): Long
@@ -97,8 +122,12 @@ interface DwdDao {
     @Query("DELETE FROM work_records WHERE id = :id")
     suspend fun deleteWorkRecord(id: Long)
 
-    @Query("SELECT * FROM work_records WHERE recordType = :type ORDER BY recordDate DESC")
+    @Query("SELECT * FROM work_records WHERE recordType = :type ORDER BY recordDate DESC, id DESC")
     fun observeWorkRecords(type: String): Flow<List<WorkRecordEntity>>
+
+    /** Every bill/expense entered on a date remains a separate work record. */
+    @Query("SELECT * FROM work_records WHERE recordDate BETWEEN :from AND :to ORDER BY recordDate DESC, id DESC")
+    fun observeWorkRecords(from: Long, to: Long): Flow<List<WorkRecordEntity>>
 
     /** Dashboard scope is strictly work_records; personal tables cannot leak here. */
     @Query("SELECT * FROM work_records WHERE recordDate BETWEEN :from AND :to ORDER BY recordDate DESC")
@@ -140,13 +169,19 @@ interface DwdDao {
 
 @Database(
     entities = [DutyEntity::class, WorkRecordEntity::class, PersonEntity::class, PersonTransactionEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class DwdDatabase : RoomDatabase() {
     abstract fun dwdDao(): DwdDao
 
     companion object {
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE duties ADD COLUMN durationMinutes INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         @Volatile private var INSTANCE: DwdDatabase? = null
 
         fun get(context: Context): DwdDatabase =
@@ -155,7 +190,7 @@ abstract class DwdDatabase : RoomDatabase() {
                     context.applicationContext,
                     DwdDatabase::class.java,
                     "mpr_squad_dwd.db"
-                ).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2).build().also { INSTANCE = it }
             }
     }
 }
