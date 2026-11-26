@@ -1,6 +1,8 @@
 package com.mprsquad.dwd
 
 import android.os.Bundle
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
@@ -39,6 +41,7 @@ private data class Module(val title: String, val icon: ImageVector, val subtitle
 
 @Composable
 private fun DwdApp() {
+    val context = LocalContext.current
     val modules = listOf(
         Module("Duty", Icons.Default.Work, "ডিউটি ও ছুটির হিসাব"),
         Module("Bill", Icons.Default.ReceiptLong, "বিল ও পেমেন্ট"),
@@ -121,7 +124,7 @@ private fun DwdApp() {
                     title = { Text("অ্যাপ বন্ধ করবেন?") },
                     text = { Text("MPR SQUAD DWD থেকে বের হতে চান?") },
                     confirmButton = { TextButton(onClick = { showExit = false }) { Text("না") } },
-                    dismissButton = { TextButton(onClick = { showExit = false }) { Text("হ্যাঁ") } })
+                    dismissButton = { TextButton(onClick = { (context as? Activity)?.finish() }) { Text("হ্যাঁ") } })
             }
         }
     }
