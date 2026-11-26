@@ -1,11 +1,10 @@
 package com.mprsquad.dwd
 
-import android.os.Bundle
 import android.app.Activity
-import androidx.compose.ui.platform.LocalContext
+import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,106 +24,207 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-private val Navy = Color(0xFF071426)
-private val Panel = Color(0xFF10243B)
-private val Cyan = Color(0xFF32D7F5)
+private val Navy = Color(0xFF061426)
+private val Panel = Color(0xFF102A43)
+private val Cyan = Color(0xFF36DDF4)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { DwdApp() }
+        setContent { DwdApp(onExit = { finish() }) }
     }
 }
 
-private data class Module(val title: String, val icon: ImageVector, val subtitle: String)
+private data class HomeModule(val title: String, val icon: ImageVector, val color: Color)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DwdApp() {
-    val context = LocalContext.current
+private fun DwdApp(onExit: () -> Unit) {
     val modules = listOf(
-        Module("Duty", Icons.Default.Work, "ডিউটি ও ছুটির হিসাব"),
-        Module("Bill", Icons.Default.ReceiptLong, "বিল ও পেমেন্ট"),
-        Module("Expense", Icons.Default.Payments, "দৈনিক খরচ"),
-        Module("Person Accounts", Icons.Default.People, "ব্যক্তিভিত্তিক হিসাব"),
-        Module("Location Accounts", Icons.Default.Place, "লোকেশনভিত্তিক হিসাব"),
-        Module("Dashboard", Icons.Default.Dashboard, "সম্মিলিত রিপোর্ট")
+        HomeModule("ডিউটি ও ছুটির হিসাব", Icons.Default.CalendarMonth, Color(0xFF087BA8)),
+        HomeModule("বিলের হিসাব", Icons.Default.ReceiptLong, Color(0xFF087D68)),
+        HomeModule("খরচের হিসাব", Icons.Default.Payments, Color(0xFF9A520B)),
+        HomeModule("ব্যক্তিভিত্তিক হিসাব", Icons.Default.People, Color(0xFF51409A)),
+        HomeModule("স্থানভিত্তিক হিসাব", Icons.Default.Place, Color(0xFF176A9A)),
+        HomeModule("হিসাবের সারসংক্ষেপ", Icons.Default.QueryStats, Color(0xFF176A9A))
     )
-    var selected by remember { mutableStateOf<String?>(null) }
-    var menuOpen by remember { mutableStateOf(false) }
-    var showExit by remember { mutableStateOf(false) }
+    var page by remember { mutableStateOf<String?>(null) }
+    var drawer by remember { mutableStateOf(false) }
+    var exitDialog by remember { mutableStateOf(false) }
+    var officeExpanded by remember { mutableStateOf(false) }
+    var settingsExpanded by remember { mutableStateOf(false) }
+    val dateText = remember { SimpleDateFormat("dd MMMM yyyy, EEEE", Locale("bn", "BD")).format(Date()) }
+    val timeText = remember { SimpleDateFormat("hh:mm a", Locale("bn", "BD")).format(Date()) }
 
-    BackHandler(enabled = selected != null || menuOpen) {
-        if (menuOpen) menuOpen = false else selected = null
+    BackHandler(enabled = page != null || drawer) {
+        if (drawer) drawer = false else page = null
     }
-    BackHandler(enabled = selected == null && !menuOpen) { showExit = true }
+    BackHandler(enabled = page == null && !drawer) { exitDialog = true }
 
     MaterialTheme(colorScheme = darkColorScheme(
-        background = Navy, surface = Panel, primary = Cyan,
+        primary = Cyan, background = Navy, surface = Panel,
         onBackground = Color.White, onSurface = Color.White
     )) {
         Box(Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF0B2038), Navy, Color(0xFF030A13)))
+            Brush.verticalGradient(listOf(Color(0xFF0A2942), Navy, Color(0xFF020810)))
         )) {
-            Column(Modifier.fillMaxSize().padding(18.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Default.Menu, "Menu", tint = Cyan)
+            if (page == null) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("MPR SQUAD™", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("DAILY WORK DETAILS", color = Color(0xFFD3E9F4), fontSize = 13.sp)
+                        }
+                        Button(onClick = { drawer = true }, shape = RoundedCornerShape(16.dp)) {
+                            Icon(Icons.Default.Menu, null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("মেনু")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(onClick = { page = "সার্চ" }) {
+                            Icon(Icons.Default.Search, "সার্চ", tint = Cyan)
+                        }
                     }
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = { /* Search implementation is planned */ }) {
-                        Icon(Icons.Default.Search, "Search", tint = Cyan)
-                    }
-                }
-                Text("MPR SQUAD™", color = Cyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("DWD", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
-                Text("DAILY WORK DETAILS", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("unmatched in every spot", color = Cyan, fontSize = 12.sp)
-                Text("আজকের তারিখ ও সময় • ডিভাইসের স্থানীয় সময়", color = Color.LightGray, fontSize = 12.sp)
-                Spacer(Modifier.height(22.dp))
-                if (selected == null) {
-                    Text("MAIN MODULES", color = Cyan, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(12.dp))
-                    LazyVerticalGrid(columns = GridCells.Fixed(2),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(modules) { m ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth().height(142.dp).clickable { selected = m.title },
-                                shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = Panel)
-                            ) {
-                                Column(Modifier.fillMaxSize().padding(15.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                                    Icon(m.icon, null, tint = Cyan, modifier = Modifier.size(30.dp))
-                                    Column {
-                                        Text(m.title, color = Color.White, fontWeight = FontWeight.Bold)
-                                        Text(m.subtitle, color = Color.LightGray, fontSize = 11.sp)
+                    HorizontalDivider(color = Cyan.copy(alpha = .6f))
+                    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                        Spacer(Modifier.height(14.dp))
+                        // Brand panel reserved for the supplied portrait and finished DWD artwork.
+                        Card(
+                            modifier = Modifier.fillMaxWidth().height(190.dp),
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF101D32)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Cyan.copy(alpha = .8f))
+                        ) {
+                            Box(Modifier.fillMaxSize().background(
+                                Brush.horizontalGradient(listOf(Color(0xFF071426), Color(0xFF123F59), Color(0xFF24143C)))
+                            ).padding(16.dp), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("MPR SQUAD™", color = Color(0xFFFFD98A), fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                    Text("DWD", color = Cyan, fontSize = 58.sp, fontWeight = FontWeight.Black)
+                                    Text("Daily Work Details", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    Text("unmatched in every spot", color = Color(0xFFFFD98A), fontSize = 12.sp)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("MP RAKIB  •  Founder & Lead Developer", color = Color.White, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF124A68)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD36B))
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("সময়", color = Color.LightGray, fontSize = 12.sp)
+                                    Text(timeText, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                }
+                                VerticalDivider(Modifier.height(42.dp), color = Color.LightGray)
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1.6f)) {
+                                    Text("তারিখ", color = Color.LightGray, fontSize = 12.sp)
+                                    Text(dateText, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(modules) { item ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().height(124.dp).clickable { page = item.title },
+                                    shape = RoundedCornerShape(22.dp),
+                                    colors = CardDefaults.cardColors(containerColor = item.color),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .25f))
+                                ) {
+                                    Column(
+                                        Modifier.fillMaxSize().padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(item.icon, null, tint = Color.White, modifier = Modifier.size(34.dp))
+                                        Spacer(Modifier.height(9.dp))
+                                        Text(item.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     }
                                 }
                             }
                         }
                     }
-                } else {
-                    Text(selected!!, color = Cyan, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(10.dp))
-                    Text("এই মডিউলের ফর্ম, ডাটাবেস, PDF ও হিসাবের ফিচার পরবর্তী বাস্তবায়ন ধাপে যুক্ত হবে।",
-                        color = Color.White)
-                    Spacer(Modifier.height(16.dp))
-                    OutlinedButton(onClick = { selected = null }) { Text("ফিরে যান") }
+                }
+            } else {
+                Column(Modifier.fillMaxSize().padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { page = null }) { Icon(Icons.Default.ArrowBack, "ফিরে যান", tint = Cyan) }
+                        Text(page!!, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text("এই মডিউলের পূর্ণ ফর্ম, হিসাব, সম্পাদনা, মুছে ফেলা ও PDF পরবর্তী বাস্তবায়ন ধাপে যুক্ত হচ্ছে।",
+                        color = Color.LightGray)
                 }
             }
-            if (menuOpen) {
-                AlertDialog(onDismissRequest = { menuOpen = false },
-                    title = { Text("অতিরিক্ত মেনু") },
-                    text = { Text("Office Contract\nStock Inventory\nSettings\nBackup & Restore\nApp Info / Developer") },
-                    confirmButton = { TextButton(onClick = { menuOpen = false }) { Text("বন্ধ করুন") } })
+
+            if (drawer) {
+                ModalNavigationDrawer(
+                    drawerState = rememberDrawerState(DrawerValue.Open),
+                    drawerContent = {
+                        ModalDrawerSheet(
+                            modifier = Modifier.fillMaxHeight().width(310.dp),
+                            drawerContainerColor = Color(0xFFF0F5FA)
+                        ) {
+                            Spacer(Modifier.height(26.dp))
+                            Text("MPR SQUAD™", modifier = Modifier.padding(20.dp), color = Color(0xFF12324C), fontWeight = FontWeight.Black, fontSize = 21.sp)
+                            NavigationDrawerItem(label = { Text("🏠  হোম") }, selected = false, onClick = { page = null; drawer = false })
+                            NavigationDrawerItem(
+                                label = { Text("🗓️  অফিস কন্ট্রাক্ট") },
+                                selected = false,
+                                onClick = { officeExpanded = !officeExpanded }
+                            )
+                            if (officeExpanded) {
+                                NavigationDrawerItem(label = { Text("মাসিক বেতন ও মোবাইল বিল") }, selected = false, onClick = { page = "অফিস কন্ট্রাক্ট"; drawer = false })
+                                NavigationDrawerItem(label = { Text("বোনাস") }, selected = false, onClick = { page = "বোনাস"; drawer = false })
+                            }
+                            NavigationDrawerItem(
+                                label = { Text("⚙️  সেটিংস ও অন্যান্য") },
+                                selected = false,
+                                onClick = { settingsExpanded = !settingsExpanded }
+                            )
+                            if (settingsExpanded) {
+                                listOf("স্টক ইনভেন্টরি", "রিমাইন্ডার ও থিম", "ব্যাকআপ ও রিস্টোর", "অ্যাপ তথ্য / ডেভেলপার").forEach { label ->
+                                    NavigationDrawerItem(label = { Text(label) }, selected = false, onClick = { page = label; drawer = false })
+                                }
+                            }
+                            NavigationDrawerItem(
+                                label = { Text("📲  সম্পূর্ণ অ্যাপ Share / অন্যকে পাঠান") },
+                                selected = false,
+                                onClick = { page = "অ্যাপ Share"; drawer = false }
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            NavigationDrawerItem(label = { Text("✕  বন্ধ করুন") }, selected = false, onClick = { drawer = false })
+                        }
+                    },
+                    content = { }
+                )
             }
-            if (showExit) {
-                AlertDialog(onDismissRequest = { showExit = false },
+            if (exitDialog) {
+                AlertDialog(
+                    onDismissRequest = { exitDialog = false },
                     title = { Text("অ্যাপ বন্ধ করবেন?") },
                     text = { Text("MPR SQUAD DWD থেকে বের হতে চান?") },
-                    confirmButton = { TextButton(onClick = { showExit = false }) { Text("না") } },
-                    dismissButton = { TextButton(onClick = { (context as? Activity)?.finish() }) { Text("হ্যাঁ") } })
+                    confirmButton = { TextButton(onClick = { exitDialog = false }) { Text("না") } },
+                    dismissButton = { TextButton(onClick = onExit) { Text("হ্যাঁ") } }
+                )
             }
         }
     }
