@@ -2,6 +2,7 @@ package com.mprsquad.dwd
 
 import android.app.Activity
 import android.os.Bundle
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -16,6 +17,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import com.mprsquad.dwd.data.DwdDatabase
+import com.mprsquad.dwd.data.DutyEntity
+import com.mprsquad.dwd.data.calculateDutyMinutes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -166,6 +175,8 @@ private fun DwdApp(onExit: () -> Unit) {
                 }
             } else if (page == "অ্যাপ তথ্য / ডেভেলপার") {
                 AboutInfo(onBack = { page = null })
+            } else if (page == "ডিউটি ও ছুটির হিসাব") {
+                DutyScreen(onBack = { page = null })
             } else {
                 Column(Modifier.fillMaxSize().padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -227,6 +238,114 @@ private fun DwdApp(onExit: () -> Unit) {
                     confirmButton = { TextButton(onClick = { exitDialog = false }) { Text("না") } },
                     dismissButton = { TextButton(onClick = onExit) { Text("হ্যাঁ") } }
                 )
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun DutyScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val dao = remember { DwdDatabase.get(context).dwdDao() }
+    val scope = rememberCoroutineScope()
+    val entries by dao.observeDuties().collectAsState(initial = emptyList())
+    val today = remember { LocalDate.now() }
+    var date by remember { mutableStateOf(today.toString()) }
+    var start by remember { mutableStateOf("09:00") }
+    var end by remember { mutableStateOf("17:00") }
+    var location by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var dayOff by remember { mutableStateOf(false) }
+    var editingId by remember { mutableStateOf<Long?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val totalMinutes = entries.filter { it.dutyType == "DUTY" }.sumOf { it.durationMinutes }
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "ফিরে যান", tint = Cyan) }
+            Text("ডিউটি ও ছুটির হিসাব", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF124A68)), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(14.dp)) {
+                Text("সব সংরক্ষিত ডিউটির মোট সময়", color = Color.White)
+                Text("$hours ঘণ্টা $minutes মিনিট", color = Cyan, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                Text("মোট এন্ট্রি: ${entries.size}", color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(if (editingId == null) "নতুন ডিউটি এন্ট্রি" else "ডিউটি এন্ট্রি সম্পাদনা", color = Cyan, fontWeight = FontWeight.Bold)
+        OutlinedTextField(value = date, onValueChange = { date = it }, label = { Text("তারিখ (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(value = start, onValueChange = { start = it }, label = { Text("শুরুর সময় (HH:mm)") }, singleLine = true, modifier = Modifier.weight(1f))
+            OutlinedTextField(value = end, onValueChange = { end = it }, label = { Text("শেষের সময় (HH:mm)") }, singleLine = true, modifier = Modifier.weight(1f))
+        }
+        OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("কাজের স্থান / Location") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("কাজের বিবরণ") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = dayOff, onCheckedChange = { dayOff = it })
+            Text("ছুটির দিন", color = Color.White)
+        }
+        if (error != null) Text(error!!, color = Color(0xFFFF8A80), fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                try {
+                    val localDate = LocalDate.parse(date)
+                    val epoch = localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    val type = if (dayOff) "DAY_OFF" else "DUTY"
+                    val duration = if (dayOff) 0 else calculateDutyMinutes(start, end)
+                    if (!dayOff && location.isBlank()) throw IllegalArgumentException("কাজের স্থান লিখুন।")
+                    val item = DutyEntity(
+                        id = editingId ?: 0L, workDate = epoch,
+                        startTime = if (dayOff) "" else start,
+                        endTime = if (dayOff) "" else end,
+                        location = location.trim(), dutyType = type,
+                        description = description.trim(), durationMinutes = duration
+                    )
+                    scope.launch {
+                        if (editingId == null) dao.saveDuty(item) else dao.updateDuty(item)
+                        editingId = null
+                        location = ""; description = ""; dayOff = false
+                        error = null
+                    }
+                } catch (e: Exception) {
+                    error = e.message ?: "তারিখ ও সময় সঠিকভাবে লিখুন।"
+                }
+            }) { Text(if (editingId == null) "সংরক্ষণ" else "আপডেট") }
+            OutlinedButton(onClick = {
+                editingId = null; location = ""; description = ""; dayOff = false
+                start = "09:00"; end = "17:00"; date = LocalDate.now().toString(); error = null
+            }) { Text("নতুন") }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("সংরক্ষিত এন্ট্রি (তারিখ অনুযায়ী)", color = Cyan, fontWeight = FontWeight.Bold)
+        androidx.compose.foundation.lazy.LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(entries, key = { it.id }) { item ->
+                val mins = item.durationMinutes
+                Card(colors = CardDefaults.cardColors(containerColor = Panel), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                        Text(LocalDate.ofInstant(java.time.Instant.ofEpochMilli(item.workDate), ZoneId.systemDefault()).toString(), color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(if (item.dutyType == "DAY_OFF") "ছুটি" else "${item.location} • ${item.startTime} – ${item.endTime}", color = Cyan)
+                        if (item.dutyType == "DUTY") Text("সময়: ${mins / 60} ঘণ্টা ${mins % 60} মিনিট", color = Color.White)
+                        if (item.description.isNotBlank()) Text(item.description, color = Color.LightGray)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = {
+                                editingId = item.id
+                                date = LocalDate.ofInstant(java.time.Instant.ofEpochMilli(item.workDate), ZoneId.systemDefault()).toString()
+                                start = item.startTime.ifBlank { "09:00" }; end = item.endTime.ifBlank { "17:00" }
+                                location = item.location; description = item.description
+                                dayOff = item.dutyType == "DAY_OFF"; error = null
+                            }) { Text("সম্পাদনা") }
+                            TextButton(onClick = { scope.launch { dao.deleteDuty(item.id) } }) { Text("মুছুন", color = Color(0xFFFF8A80)) }
+                        }
+                    }
+                }
             }
         }
     }
