@@ -164,13 +164,15 @@ private fun DwdApp(onExit: () -> Unit) {
                         }
                     }
                 }
+            } else if (page == "অ্যাপ তথ্য / ডেভেলপার") {
+                AboutInfo(onBack = { page = null })
             } else {
                 Column(Modifier.fillMaxSize().padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { page = null }) { Icon(Icons.Default.ArrowBack, "ফিরে যান", tint = Cyan) }
                         Text(page!!, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     }
-                    Text("এই মডিউলের পূর্ণ ফর্ম, হিসাব, সম্পাদনা, মুছে ফেলা ও PDF পরবর্তী বাস্তবায়ন ধাপে যুক্ত হচ্ছে।",
+                    Text("এই মডিউলের পূর্ণ ফর্ম, হিসাব, সম্পাদনা, মুছে ফেলা ও PDF এখনো বাস্তবায়নাধীন।",
                         color = Color.LightGray)
                 }
             }
@@ -227,5 +229,67 @@ private fun DwdApp(onExit: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+
+@Composable
+private fun AboutInfo(onBack: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "ফিরে যান", tint = Cyan) }
+            Text("অ্যাপ তথ্য / ডেভেলপার", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(22.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF102C48)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Cyan)
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    Modifier.size(104.dp).background(
+                        Brush.linearGradient(listOf(Color(0xFF147DA7), Color(0xFF17264B))),
+                        RoundedCornerShape(52.dp)
+                    ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("DWD", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Black)
+                }
+                Spacer(Modifier.height(16.dp))
+                Text("MP RAKIB", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
+                Text("Founder & Lead Developer", color = Color(0xFFBBD2E2), fontSize = 14.sp)
+                Spacer(Modifier.height(22.dp))
+                Text("DWD", color = Cyan, fontSize = 58.sp, fontWeight = FontWeight.Black)
+                Text("Daily Work Details", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Text("MPR SQUAD™", color = Color(0xFFFFD98A), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("unmatched in every spot", color = Color(0xFFBBD2E2), fontSize = 12.sp)
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider(color = Cyan.copy(alpha = .35f))
+                Spacer(Modifier.height(16.dp))
+                Text("Developer Contact", color = Color.White, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Text("Contact : 019090-62744", color = Color(0xFFE5F1F8), fontSize = 15.sp)
+                Text("Email : mpr.lifeline0@gmail.com", color = Color(0xFFE5F1F8), fontSize = 14.sp)
+                Spacer(Modifier.height(20.dp))
+                HorizontalDivider(color = Cyan.copy(alpha = .35f))
+                Spacer(Modifier.height(12.dp))
+                Text("Version : 0.1.0", color = Color.LightGray, fontSize = 11.sp)
+                Text("Release Date : প্রকাশের সময় নির্ধারিত হবে", color = Color.LightGray, fontSize = 11.sp)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "ডেভেলপার পরিচিতি ও যোগাযোগের তথ্য",
+            color = Color(0xFF9BB6C8),
+            fontSize = 11.sp
+        )
     }
 }
