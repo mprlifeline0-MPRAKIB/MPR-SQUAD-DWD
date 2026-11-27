@@ -51,7 +51,7 @@ internal fun WorkRecordScreen(title: String, type: String, onBack: () -> Unit) {
         mealDay = "0"; mealNight = "0"; peopleCount = "0"; peopleNames = ""; payer = ""
         paid = false; editing = null; error = ""
     }
-    fun money(value: String): Double = value.toDoubleOrNull()?.also { require(it >= 0) } ?: error("Invalid amount")
+    fun money(value: String): Double = value.toDoubleOrNull()?.also { require(it >= 0) } ?: throw IllegalArgumentException("Invalid amount")
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -97,7 +97,7 @@ internal fun WorkRecordScreen(title: String, type: String, onBack: () -> Unit) {
                                 returnMode = returnMode, returnFare = if (isBill) money(returnFare) else 0.0,
                                 mealDay = if (isBill) money(mealDay) else 0.0,
                                 mealNight = if (isBill) money(mealNight) else 0.0,
-                                peopleCount = if (isBill) (peopleCount.toIntOrNull() ?: error("Invalid people count")) else 0,
+                                peopleCount = if (isBill) (peopleCount.toIntOrNull() ?: throw IllegalArgumentException("Invalid people count")) else 0,
                                 peopleNames = peopleNames, payer = payer, paid = paid
                             )
                             scope.launch {
