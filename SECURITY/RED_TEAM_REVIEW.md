@@ -1,58 +1,34 @@
-# Red Team Review — MPR SQUAD DWD
+# Privacy and Release Check — MPR SQUAD DWD
 
-Review date: 2026-11-26
-Scope: current repository contents on `main` only.
-Review type: preliminary static review. No APK was available, so this is not a runtime penetration test, device test, or certification.
+Updated: 2026-11-27
+Scope: personal, offline-first use by the owner, with APK sharing to other people.
 
-## Executive result
+## User's practical privacy requirement
 
-**Release decision: BLOCKED.** The current app is a UI scaffold. The six home cards open placeholder text; there is no implemented business workflow, persistent database, PDF export, backup/restore, reminder, account isolation, or app-sharing feature. These missing features cannot yet be penetration-tested.
+The owner wants each person who installs a shared APK to use the app independently. Another install must not receive or see the owner's records. This is a data-separation requirement, not a request for enterprise-grade security or a formal penetration-test certification.
 
-## Findings
+## Required implementation
 
-### RT-001 — Critical / release blocker: core features are not implemented
-Evidence: `MainActivity.kt` displays a placeholder message after selecting a module. Room dependencies are declared but no entities, DAO, database, repositories, or migrations exist.
-Risk: users cannot create or preserve work records; totals and reports do not exist.
-Required remediation: implement each module and persistence, then add functional and data-integrity tests.
+1. Store operational records in the app's private on-device database (Room).
+2. Do not sync records to a server or embed real records, backups, tokens, or signing keys in the APK or public Git repository.
+3. A fresh install on another person's phone starts with an empty, separate local database. Sharing the APK shares the application only, not the owner's app data.
+4. Keep backup/export as an explicit user action. Never silently include the owner's records when sharing the APK.
+5. If import/restore is added, make it a deliberate action with a clear confirmation so the recipient imports only a backup they choose.
+6. Keep personal-account transactions separate from work records; exclude them from work Dashboard totals and general work PDFs as requested.
 
-### RT-002 — High / release blocker: personal-account isolation is not implemented
-Evidence: no personal-account data model or dashboard/PDF query filtering exists.
-Risk: the requirement that personal accounts be excluded from general totals and PDFs is not enforceable or testable yet.
-Required remediation: separate account types and enforce exclusion in repository/query/report layers, with automated regression tests.
+## Proportionate checks before delivery
 
-### RT-003 — High / release blocker: backup, restore and PDF surfaces are absent
-Evidence: no backup/export/restore or PDF implementation exists.
-Risk: data loss and unintended disclosure cannot be assessed.
-Required remediation: implement validated backup format, restore confirmation/rollback, and contextual PDF generation; test malformed and tampered backups and privacy boundaries.
+- Verify app data is stored in app-private local storage.
+- Verify no cloud sync or automatic data upload exists.
+- Verify APK sharing sends the APK only, not the database or backup.
+- Verify a clean install starts with no pre-existing records.
+- Verify personal transactions stay out of work totals and general work reports.
+- Run Android build and basic app/data-flow tests; fix release-blocking defects.
 
-### RT-004 — Medium: exit confirmation previously did not exit
-Evidence: the “Yes” button only dismissed the dialog.
-Status: fixed in the current branch by calling Activity.finish() from the confirmation action. Must still be verified in a device test.
+## Out of scope unless later requested
 
-### RT-005 — Low: no unnecessary Android permissions in current manifest
-Evidence: current manifest declares no dangerous permissions, exported launcher activity only.
-Status: positive observation for this scaffold. Reassess when file sharing, notifications, image selection, or backup features are added. Prefer Android Sharesheet and Storage Access Framework rather than broad storage permissions.
+- Formal penetration-test certification, enterprise threat modelling, complex account/login systems, and cloud security infrastructure.
 
-### RT-006 — Medium: public repository exposure
-Evidence: repository visibility is public.
-Risk: any committed personal portrait/contact details, backups, tokens, signing keys, or real user data would be publicly accessible.
-Required remediation: keep secrets and real records out of Git; review branding assets and contact information before committing.
+## Current status
 
-## Security controls added / planned
-
-- Add GitHub CodeQL static analysis workflow for Kotlin/Java.
-- Keep workflow permissions least-privilege.
-- Build from source in CI; do not treat a successful compile as proof of feature completeness or security.
-- Before release: dependency review, static analysis, unit/instrumentation tests, offline and persistence tests, backup tamper tests, privacy isolation tests, and physical Android device validation.
-
-## Test status
-
-- Source inspection: completed for current scaffold files.
-- Runtime APK analysis: not run (no APK artifact available).
-- Physical Android test: not run.
-- Penetration test: not run.
-- CodeQL: workflow added; result pending a GitHub Actions run.
-
-## Exit criteria
-
-Do not label the app complete or release-ready until all release blockers are fixed, automated tests pass, CodeQL is clean or findings are triaged, and the APK is installed and exercised on a physical Android phone.
+This document defines the practical privacy target. It does not claim that all checks have passed. The app still needs the remaining modules and the checks above before it can be called ready for everyday use.
