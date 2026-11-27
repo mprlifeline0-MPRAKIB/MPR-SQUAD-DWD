@@ -182,6 +182,12 @@ private fun DwdApp(onExit: () -> Unit) {
                 WorkRecordScreen(title = page!!, type = if (page == "বিলের হিসাব") "BILL" else "EXPENSE", onBack = { page = null })
             } else if (page == "ব্যক্তিভিত্তিক হিসাব") {
                 PersonLedgerScreen(onBack = { page = null })
+            } else if (page == "স্থানভিত্তিক হিসাব" || page == "হিসাবের সারসংক্ষেপ") {
+                WorkOverviewScreen(title = page!!, locationMode = page == "স্থানভিত্তিক হিসাব", onBack = { page = null })
+            } else if (page == "অফিস কন্ট্রাক্ট" || page == "বোনাস" || page == "স্টক ইনভেন্টরি") {
+                WorkRecordScreen(title = page!!, type = if (page == "স্টক ইনভেন্টরি") "STOCK" else "CONTRACT", onBack = { page = null })
+            } else if (page == "অ্যাপ Share") {
+                AppShareScreen(onBack = { page = null })
             } else {
                 Column(Modifier.fillMaxSize().padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
