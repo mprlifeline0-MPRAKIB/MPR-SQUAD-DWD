@@ -180,6 +180,8 @@ private fun DwdApp(onExit: () -> Unit) {
                 DutyScreen(onBack = { page = null })
             } else if (page == "বিলের হিসাব" || page == "খরচের হিসাব") {
                 WorkRecordScreen(title = page!!, type = if (page == "বিলের হিসাব") "BILL" else "EXPENSE", onBack = { page = null })
+            } else if (page == "ব্যক্তিভিত্তিক হিসাব") {
+                PersonLedgerScreen(onBack = { page = null })
             } else {
                 Column(Modifier.fillMaxSize().padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
