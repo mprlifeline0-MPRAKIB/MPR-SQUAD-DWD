@@ -178,6 +178,9 @@ private fun DwdApp(onExit: () -> Unit) {
                 AboutInfo(onBack = { page = null })
             } else if (page == "ডিউটি ও ছুটির হিসাব") {
                 DutyScreen(onBack = { page = null })
+            } else if (page == "বিলের হিসাব" || page == "খরচের হিসাব") {
+                WorkRecordScreen(title = page!!, type = if (page == "বিলের হিসাব") "BILL" else "EXPENSE", onBack = { page = null })
+            } else {
             } else {
                 Column(Modifier.fillMaxSize().padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
