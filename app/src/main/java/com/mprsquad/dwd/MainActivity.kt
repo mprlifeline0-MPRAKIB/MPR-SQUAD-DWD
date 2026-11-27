@@ -181,7 +181,6 @@ private fun DwdApp(onExit: () -> Unit) {
             } else if (page == "বিলের হিসাব" || page == "খরচের হিসাব") {
                 WorkRecordScreen(title = page!!, type = if (page == "বিলের হিসাব") "BILL" else "EXPENSE", onBack = { page = null })
             } else {
-            } else {
                 Column(Modifier.fillMaxSize().padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { page = null }) { Icon(Icons.Default.ArrowBack, "ফিরে যান", tint = Cyan) }
