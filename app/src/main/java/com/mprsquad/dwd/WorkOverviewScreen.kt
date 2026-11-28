@@ -48,7 +48,8 @@ internal fun WorkOverviewScreen(title: String, locationMode: Boolean, onBack: ()
                 page.canvas.drawText(line.take(95), 36f, y, paint); y += 16f
             }
             pdf.finishPage(page)
-            context.contentResolver.openOutputStream(uri)?.use { pdf.writeTo(it) } ?: error("PDF destination unavailable")
+            val output = ctx.contentResolver.openOutputStream(uri) ?: error("PDF destination unavailable")
+            output.use { stream -> pdf.writeTo(stream) }
             pdf.close()
         }
     }
