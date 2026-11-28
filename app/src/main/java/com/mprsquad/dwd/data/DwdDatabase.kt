@@ -192,5 +192,10 @@ abstract class DwdDatabase : RoomDatabase() {
                     "mpr_squad_dwd.db"
                 ).addMigrations(MIGRATION_1_2).build().also { INSTANCE = it }
             }
+
+        fun closeForRestore() = synchronized(this) {
+            INSTANCE?.close()
+            INSTANCE = null
+        }
     }
 }
