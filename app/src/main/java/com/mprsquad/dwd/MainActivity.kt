@@ -188,6 +188,8 @@ private fun DwdApp(onExit: () -> Unit) {
                 WorkRecordScreen(title = page!!, type = if (page == "স্টক ইনভেন্টরি") "STOCK" else "CONTRACT", onBack = { page = null })
             } else if (page == "অ্যাপ Share") {
                 AppShareScreen(onBack = { page = null })
+            } else if (page == "ব্যাকআপ ও রিস্টোর") {
+                BackupRestoreScreen(onBack = { page = null })
             } else {
                 Column(Modifier.fillMaxSize().padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
