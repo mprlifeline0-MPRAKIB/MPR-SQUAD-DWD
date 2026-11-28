@@ -1,5 +1,9 @@
 package com.mprsquad.dwd
 
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +35,23 @@ internal fun WorkOverviewScreen(title: String, locationMode: Boolean, onBack: ()
     val filtered = rows.filter { it.recordDate in from..to }
     val places = rows.map { it.location }.distinct().sorted()
     val total = filtered.sumOf { it.amount + it.outboundFare + it.returnFare + it.mealDay + it.mealNight }
+    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        if (uri != null) runCatching {
+            val pdf = PdfDocument()
+            val page = pdf.startPage(PdfDocument.PageInfo.Builder(595, 842, 1).create())
+            val paint = Paint().apply { textSize = 12f; isAntiAlias = true }
+            var y = 42f
+            page.canvas.drawText("MPR SQUAD DWD - " + title, 36f, y, paint); y += 24f
+            page.canvas.drawText("Period: " + fromText + " to " + toText + " | Records: " + filtered.size + " | Total BDT: " + total, 36f, y, paint); y += 28f
+            filtered.take(45).forEach { row ->
+                val line = row.location + " | " + row.title + " | BDT " + (row.amount + row.outboundFare + row.returnFare + row.mealDay + row.mealNight)
+                page.canvas.drawText(line.take(95), 36f, y, paint); y += 16f
+            }
+            pdf.finishPage(page)
+            context.contentResolver.openOutputStream(uri)?.use { pdf.writeTo(it) } ?: error("PDF destination unavailable")
+            pdf.close()
+        }
+    }
     Column(Modifier.fillMaxSize().padding(14.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick=onBack) { Icon(Icons.Default.ArrowBack,"ফিরে যান",tint=Color.Cyan) }
@@ -46,6 +67,7 @@ internal fun WorkOverviewScreen(title: String, locationMode: Boolean, onBack: ()
             }
             if(selectedLocation.isNotBlank()) Text("নির্বাচিত: $selectedLocation",color=Color.Cyan)
         }
+        Button(onClick={pdfLauncher.launch("MPR-DWD-report.pdf")}, modifier=Modifier.fillMaxWidth()) { Text("PDF রিপোর্ট তৈরি করুন") }
         Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=Color(0xFF124A68))) {
             Column(Modifier.padding(14.dp)) {
                 Text("কাজের হিসাবের মোট",color=Color.White)
